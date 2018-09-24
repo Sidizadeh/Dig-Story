@@ -56,12 +56,14 @@ public class ClassifierActivity extends CameraActivity implements OnImageAvailab
   static class Info {
     public final String model;
     public final String label;
+    public final String expected;
     public final String next;
     public final int video;
 
-    public Info(String model, String label, int video, String next) {
+    public Info(String model, String label, String expected, int video, String next) {
       this.model = model;
       this.label = label;
+      this.expected = expected;
       this.video = video;
       this.next = next;
     }
@@ -70,8 +72,8 @@ public class ClassifierActivity extends CameraActivity implements OnImageAvailab
   public static final Map<String, Info> locationsMap = createLocationsMap();
   private static Map<String, Info> createLocationsMap() {
     Map<String,Info> locs = new HashMap<>();
-    locs.put("wdr", new Info("presse_graph2.pb", "presse_labels.txt", R.raw.fwango, "bahn"));
-    locs.put("bahn", new Info("bahn_graph2.pb", "bahn_labels.txt", R.raw.fwango, "wohnung"));
+    locs.put("wdr", new Info("presse_graph2.pb", "presse_labels.txt", "wdr duesseldorf", R.raw.intro, "wohnung"));
+    locs.put("wohnung", new Info("wohnung2.pb", "wohnung.txt", "wohnnung", R.raw.vlog, "bahn"));
     return locs;
   }
 
@@ -135,8 +137,9 @@ public class ClassifierActivity extends CameraActivity implements OnImageAvailab
 
     Bundle extras = getIntent().getExtras();
 
-    currentKey = extras != null ? extras.getString("next") : "wdr";
+    currentKey = extras != null ? (extras.getString("next") != null ? extras.getString("next") : "wdr") : "wdr";
 
+    expectedResult = locationsMap.get(currentKey).expected;
     String model = "file:///android_asset/" + locationsMap.get(currentKey).model;
     String label = "file:///android_asset/" + locationsMap.get(currentKey).label;
 
@@ -169,13 +172,6 @@ public class ClassifierActivity extends CameraActivity implements OnImageAvailab
     Matrix cropToFrameTransform = new Matrix();
     frameToCropTransform.invert(cropToFrameTransform);
 
-    addCallback(
-        new DrawCallback() {
-          @Override
-          public void drawCallback(final Canvas canvas) {
-            renderDebug(canvas);
-          }
-        });
   }
 
   @Override
@@ -207,11 +203,6 @@ public class ClassifierActivity extends CameraActivity implements OnImageAvailab
               nextImage();
             }
             cropCopyBitmap = Bitmap.createBitmap(croppedBitmap);
-            if (resultsView == null) {
-              resultsView = (ResultsView) findViewById(R.id.results);
-            }
-            resultsView.setResults(results);
-            requestRender();
             readyForNextImage();
           }
         });
@@ -227,38 +218,5 @@ public class ClassifierActivity extends CameraActivity implements OnImageAvailab
   @Override
   public void onSetDebug(boolean debug) {
     classifier.enableStatLogging(debug);
-  }
-
-  private void renderDebug(final Canvas canvas) {
-    if (!isDebug()) {
-      return;
-    }
-    final Bitmap copy = cropCopyBitmap;
-    if (copy != null) {
-      final Matrix matrix = new Matrix();
-      final float scaleFactor = 2;
-      matrix.postScale(scaleFactor, scaleFactor);
-      matrix.postTranslate(
-          canvas.getWidth() - copy.getWidth() * scaleFactor,
-          canvas.getHeight() - copy.getHeight() * scaleFactor);
-      canvas.drawBitmap(copy, matrix, new Paint());
-
-      final Vector<String> lines = new Vector<String>();
-      if (classifier != null) {
-        String statString = classifier.getStatString();
-        String[] statLines = statString.split("\n");
-        for (String line : statLines) {
-          lines.add(line);
-        }
-      }
-
-      lines.add("Frame: " + previewWidth + "x" + previewHeight);
-      lines.add("Crop: " + copy.getWidth() + "x" + copy.getHeight());
-      lines.add("View: " + canvas.getWidth() + "x" + canvas.getHeight());
-      lines.add("Rotation: " + sensorOrientation);
-      lines.add("Inference time: " + lastProcessingTimeMs + "ms");
-
-      borderedText.drawLines(canvas, 10, canvas.getHeight() - 10, lines);
-    }
   }
 }
