@@ -26,8 +26,8 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <uses-sdk
-        android:minSdkVersion="21"
-        android:targetSdkVersion="23" />
+        android:minSdkVersion="23"
+        android:targetSdkVersion="28" />
 
     <application android:allowBackup="true"
         android:debuggable="true"
@@ -38,6 +38,16 @@
         <activity android:name="org.tensorflow.demo.ClassifierActivity"
                   android:screenOrientation="portrait"
                   android:label="@string/activity_name_classification">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name="org.tensorflow.demo.VideoActivity"
+            android:screenOrientation="portrait"
+            android:label="video">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

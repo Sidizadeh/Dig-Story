@@ -16,6 +16,7 @@
 
 package org.tensorflow.demo;
 
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
 import android.graphics.Canvas;
@@ -23,12 +24,17 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.media.ImageReader.OnImageAvailableListener;
+import android.os.Bundle;
 import android.os.SystemClock;
+import android.util.Log;
 import android.util.Size;
 import android.util.TypedValue;
 import android.view.Display;
 import android.view.Surface;
+
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Vector;
 import org.tensorflow.demo.OverlayView.DrawCallback;
 import org.tensorflow.demo.env.BorderedText;
@@ -46,6 +52,28 @@ public class ClassifierActivity extends CameraActivity implements OnImageAvailab
   private Bitmap rgbFrameBitmap = null;
   private Bitmap croppedBitmap = null;
   private Bitmap cropCopyBitmap = null;
+
+  static class Info {
+    public final String model;
+    public final String label;
+    public final String next;
+    public final int video;
+
+    public Info(String model, String label, int video, String next) {
+      this.model = model;
+      this.label = label;
+      this.video = video;
+      this.next = next;
+    }
+  }
+
+  public static final Map<String, Info> locationsMap = createLocationsMap();
+  private static Map<String, Info> createLocationsMap() {
+    Map<String,Info> locs = new HashMap<>();
+    locs.put("wdr", new Info("presse_graph2.pb", "presse_labels.txt", R.raw.fwango, "bahn"));
+    locs.put("bahn", new Info("bahn_graph2.pb", "bahn_labels.txt", R.raw.fwango, "wohnung"));
+    return locs;
+  }
 
   private long lastProcessingTimeMs;
 
@@ -71,12 +99,6 @@ public class ClassifierActivity extends CameraActivity implements OnImageAvailab
   private static final String INPUT_NAME = "Placeholder";
   private static final String OUTPUT_NAME = "final_result";
 
-
-  private static final String MODEL_FILE = "file:///android_asset/presse_graph2.pb"; //"file:///android_asset/tensorflow_inception_graph.pb";
-  private static final String LABEL_FILE =
-          "file:///android_asset/presse_labels.txt"; //"file:///android_asset/imagenet_comp_graph_label_strings.txt";
-
-
   private static final boolean MAINTAIN_ASPECT = true;
 
   private static final Size DESIRED_PREVIEW_SIZE = new Size(640, 480);
@@ -85,8 +107,9 @@ public class ClassifierActivity extends CameraActivity implements OnImageAvailab
   private Integer sensorOrientation;
   private Classifier classifier;
   private Matrix frameToCropTransform;
-  private Matrix cropToFrameTransform;
 
+  String currentKey;
+  String expectedResult = "wdr duesseldorf";
 
   private BorderedText borderedText;
 
@@ -110,11 +133,18 @@ public class ClassifierActivity extends CameraActivity implements OnImageAvailab
     borderedText = new BorderedText(textSizePx);
     borderedText.setTypeface(Typeface.MONOSPACE);
 
+    Bundle extras = getIntent().getExtras();
+
+    currentKey = extras != null ? extras.getString("next") : "wdr";
+
+    String model = "file:///android_asset/" + locationsMap.get(currentKey).model;
+    String label = "file:///android_asset/" + locationsMap.get(currentKey).label;
+
     classifier =
         TensorFlowImageClassifier.create(
             getAssets(),
-            MODEL_FILE,
-            LABEL_FILE,
+            model,
+            label,
             INPUT_SIZE,
             IMAGE_MEAN,
             IMAGE_STD,
@@ -136,7 +166,7 @@ public class ClassifierActivity extends CameraActivity implements OnImageAvailab
         INPUT_SIZE, INPUT_SIZE,
         sensorOrientation, MAINTAIN_ASPECT);
 
-    cropToFrameTransform = new Matrix();
+    Matrix cropToFrameTransform = new Matrix();
     frameToCropTransform.invert(cropToFrameTransform);
 
     addCallback(
@@ -166,6 +196,16 @@ public class ClassifierActivity extends CameraActivity implements OnImageAvailab
             final List<Classifier.Recognition> results = classifier.recognizeImage(croppedBitmap);
             lastProcessingTimeMs = SystemClock.uptimeMillis() - startTime;
             LOGGER.i("Detect: %s", results);
+            boolean containsExpected = false;
+            for (Classifier.Recognition r: results) {
+                if (r.getTitle().equals(expectedResult) && results.size() == 1) {
+                    containsExpected = true;
+                }
+            }
+            if (containsExpected) {
+              Log.e("Transition!", "Next");
+              nextImage();
+            }
             cropCopyBitmap = Bitmap.createBitmap(croppedBitmap);
             if (resultsView == null) {
               resultsView = (ResultsView) findViewById(R.id.results);
@@ -175,6 +215,13 @@ public class ClassifierActivity extends CameraActivity implements OnImageAvailab
             readyForNextImage();
           }
         });
+  }
+
+  public void nextImage() {
+    Intent intent = new Intent(this, VideoActivity.class);
+    intent.putExtra("next", locationsMap.get(currentKey).next);
+    startActivity(intent);
+    finish();
   }
 
   @Override
