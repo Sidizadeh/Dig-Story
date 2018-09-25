@@ -402,20 +402,6 @@ public abstract class CameraActivity extends Activity
     return debug;
   }
 
-  public void requestRender() {
-    final OverlayView overlay = (OverlayView) findViewById(R.id.debug_overlay);
-    if (overlay != null) {
-      overlay.postInvalidate();
-    }
-  }
-
-  public void addCallback(final OverlayView.DrawCallback callback) {
-    final OverlayView overlay = (OverlayView) findViewById(R.id.debug_overlay);
-    if (overlay != null) {
-      overlay.addCallback(callback);
-    }
-  }
-
   public void onSetDebug(final boolean debug) {}
 
   @Override
@@ -423,7 +409,6 @@ public abstract class CameraActivity extends Activity
     if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP
             || keyCode == KeyEvent.KEYCODE_BUTTON_L1 || keyCode == KeyEvent.KEYCODE_DPAD_CENTER) {
       debug = !debug;
-      requestRender();
       onSetDebug(debug);
       return true;
     }

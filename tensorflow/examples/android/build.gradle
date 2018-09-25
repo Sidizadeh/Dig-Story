@@ -78,14 +78,14 @@ project.ext.TMP_DIR   = project.buildDir.toString() + '/downloads'
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 23
+    compileSdkVersion 28
     buildToolsVersion '27.0.3'
 
     if (nativeBuildSystem == 'cmake') {
         defaultConfig {
             applicationId = 'org.tensorflow.demo'
             minSdkVersion 21
-            targetSdkVersion 23
+            targetSdkVersion 28
             ndk {
                 abiFilters "${cpuType}"
             }
@@ -190,6 +190,7 @@ apply from: "download-models.gradle"
 
 
 dependencies {
+    compile 'com.android.support:support-media-compat:28.0.0'
     if (nativeBuildSystem == 'cmake' || nativeBuildSystem == 'none') {
         compile 'org.tensorflow:tensorflow-android:+'
     }
